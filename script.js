@@ -3,8 +3,8 @@ let timeLeft = 600; // 10 minutes in seconds
 
 const GITHUB_TOKEN = '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'; // Replace with your GitHub token
 const REPO_OWNER = 'ishtiaque69';
-const REPO_NAME = 'Animahou.github.io';
-const FILE_PATH = 'Animahou.github.io/data.json';
+const REPO_NAME = 'AnimeMahou.github.io';
+const FILE_PATH = 'data.json'; // Assuming the file is in the root directory of the repo
 
 // Function to fetch leaderboard data from GitHub
 async function fetchLeaderboard() {
@@ -32,6 +32,7 @@ async function updateLeaderboard(newEntry) {
         const leaderboard = await fetchLeaderboard();
         leaderboard.push(newEntry);
 
+        // Fetch the SHA of the current file
         const fileResponse = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
             headers: {
                 'Authorization': `token ${GITHUB_TOKEN}`
@@ -149,6 +150,9 @@ async function loadResults() {
     // Clear existing rows
     leaderboardTable.innerHTML = '';
     userResultTable.innerHTML = '';
+
+    // Sort leaderboard by points (descending) and time (ascending)
+    leaderboard.sort((a, b) => b.points - a.points || a.time - b.time);
 
     // Populate the entire leaderboard
     leaderboard.forEach((entry, index) => {
