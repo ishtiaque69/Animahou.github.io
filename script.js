@@ -1,6 +1,43 @@
-let timer;
-let timeLeft = 600; // 10 minutes in seconds
+// Function to fetch leaderboard data from GitHub
+async function fetchLeaderboard() {
+    try {
+        const response = await fetch('data.json');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const data = await response.json();
+        return data.leaderboard || []; // Assuming leaderboard is stored under 'leaderboard' key
+    } catch (error) {
+        console.error('Error fetching leaderboard data:', error);
+        return []; // Return empty array if there's an error
+    }
+}
 
+// Function to update leaderboard data on GitHub
+async function updateLeaderboard(newEntry) {
+    try {
+        const leaderboard = await fetchLeaderboard();
+        leaderboard.push(newEntry);
+
+        const response = await fetch('data.json', {
+            method: 'PUT', // Use 'PUT' method to update file
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ leaderboard })
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        console.log('Leaderboard updated successfully');
+    } catch (error) {
+        console.error('Error updating leaderboard data:', error);
+    }
+}
+
+// Modify startQuiz function to call updateLeaderboard
 function startQuiz() {
     const name = document.getElementById('name').value;
     const phone = document.getElementById('phone').value;
@@ -11,48 +48,17 @@ function startQuiz() {
         return;
     }
 
-    // Retrieve the submissions from local storage, or initialize as an empty array if none exist
-    const submissions = JSON.parse(localStorage.getItem('submissions')) || [];
+    const newEntry = { name, phone, email, points: 0, time: 0 }; // Initialize with basic data
 
-    // Check if the email already exists in the submissions
-    const emailExists = submissions.some(submission => submission.email === email);
-
-    if (emailExists) {
-        alert("This email ID has already been used to take the quiz.");
-        return;
-    }
-
-    // Add the new submission to the submissions array
-    submissions.push({ name, phone, email });
-
-    // Save the updated submissions array back to local storage
-    localStorage.setItem('submissions', JSON.stringify(submissions));
-
-    // Store individual items in local storage (optional, if needed)
-    localStorage.setItem('userName', name);
-    localStorage.setItem('userPhone', phone);
-    localStorage.setItem('userEmail', email);
+    // Call updateLeaderboard to add new entry
+    updateLeaderboard(newEntry);
 
     // Redirect to quiz page
     window.location.href = 'quiz.html';
 }
 
-function startTimer() {
-    const timerElement = document.getElementById('timer');
-    timer = setInterval(() => {
-        timeLeft--;
-        let minutes = Math.floor(timeLeft / 60);
-        let seconds = timeLeft % 60;
-        timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            submitQuiz();
-        }
-    }, 1000);
-}
-
-function submitQuiz() {
+// Modify submitQuiz function to handle scoring and updating leaderboard
+async function submitQuiz() {
     clearInterval(timer);
 
     const form = document.getElementById('quizForm');
@@ -68,29 +74,21 @@ function submitQuiz() {
     }
 
     const timeTaken = 600 - timeLeft;
-    const minutes = Math.floor(timeTaken / 60);
-    const seconds = timeTaken % 60;
-    const timeFinal = `${minutes} min ${seconds} sec`;
     const userName = localStorage.getItem('userName');
     const userEmail = localStorage.getItem('userEmail');
 
-    const leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
-    leaderboard.push({ name: userName, email: userEmail, points: score, time: timeTaken });
+    const newEntry = { name: userName, email: userEmail, points: score, time: timeTaken };
 
-    leaderboard.sort((a, b) => b.points - a.points || a.time - b.time);
+    // Call updateLeaderboard to update scores
+    updateLeaderboard(newEntry);
 
-    // Update ranks after sorting
-    leaderboard.forEach((entry, index) => {
-        entry.rank = index + 1;
-    });
-
-    localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
-
+    // Redirect to results page
     window.location.href = 'results.html';
 }
 
-function loadResults() {
-    const leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+// Function to load leaderboard data on results page
+async function loadResults() {
+    const leaderboard = await fetchLeaderboard();
     const leaderboardTable = document.getElementById('leaderboard').querySelector('tbody');
     const userResultTable = document.getElementById('userResult').querySelector('tbody');
     const userName = localStorage.getItem('userName');
@@ -108,7 +106,7 @@ function loadResults() {
         const timeFinal = `${minutes} min ${seconds < 10 ? '0' : ''}${seconds} sec`;
 
         row.innerHTML = `<td>${entry.rank}</td><td>${entry.name}</td><td>${entry.points}</td><td>${timeFinal}</td><td>${entry.email}</td>`;
-        
+
         if (entry.rank <= 3) {
             row.classList.add('top3');
         }
@@ -135,6 +133,7 @@ function loadResults() {
     document.getElementById('thankYouMessage').textContent = `Thank you, ${userName}, for participating!`;
 }
 
+// Update page logic based on current page
 if (window.location.pathname.endsWith('quiz.html')) {
     startTimer();
 } else if (window.location.pathname.endsWith('results.html')) {
