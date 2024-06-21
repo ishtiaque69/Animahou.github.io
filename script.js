@@ -1,9 +1,9 @@
 let timer;
 let timeLeft = 600; // 10 minutes in seconds
 
-const GITHUB_TOKEN = 'your_github_token'; // Replace with your GitHub token
-const REPO_OWNER = 'your_github_username';
-const REPO_NAME = 'your_repo_name';
+const GITHUB_TOKEN = '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'; // Replace with your GitHub token
+const REPO_OWNER = 'ishtiaque69';
+const REPO_NAME = 'quiz-leaderboard';
 const FILE_PATH = 'data.json';
 
 // Function to fetch leaderboard data from GitHub
