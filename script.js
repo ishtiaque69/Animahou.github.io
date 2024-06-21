@@ -1,15 +1,25 @@
 let timer;
 let timeLeft = 600; // 10 minutes in seconds
 
+const GITHUB_TOKEN = 'your_github_token'; // Replace with your GitHub token
+const REPO_OWNER = 'your_github_username';
+const REPO_NAME = 'your_repo_name';
+const FILE_PATH = 'data.json';
+
 // Function to fetch leaderboard data from GitHub
 async function fetchLeaderboard() {
     try {
-        const response = await fetch('data.json');
+        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`
+            }
+        });
         if (!response.ok) {
             throw new Error('Network response was not ok');
         }
         const data = await response.json();
-        return data.leaderboard || []; // Assuming leaderboard is stored under 'leaderboard' key
+        const content = atob(data.content); // Decode base64 content
+        return JSON.parse(content).leaderboard || []; // Assuming leaderboard is stored under 'leaderboard' key
     } catch (error) {
         console.error('Error fetching leaderboard data:', error);
         return []; // Return empty array if there's an error
@@ -22,12 +32,30 @@ async function updateLeaderboard(newEntry) {
         const leaderboard = await fetchLeaderboard();
         leaderboard.push(newEntry);
 
-        const response = await fetch('data.json', {
-            method: 'PUT', // Use 'PUT' method to update file
+        const fileResponse = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
             headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`
+            }
+        });
+
+        if (!fileResponse.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const fileData = await fileResponse.json();
+        const updatedContent = btoa(JSON.stringify({ leaderboard })); // Encode content to base64
+
+        const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `token ${GITHUB_TOKEN}`,
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ leaderboard })
+            body: JSON.stringify({
+                message: 'Update leaderboard',
+                content: updatedContent,
+                sha: fileData.sha // Provide the blob SHA to update the file
+            })
         });
 
         if (!response.ok) {
@@ -129,16 +157,16 @@ async function loadResults() {
         const seconds = entry.time % 60;
         const timeFinal = `${minutes} min ${seconds < 10 ? '0' : ''}${seconds} sec`;
 
-        row.innerHTML = `<td>${entry.rank}</td><td>${entry.name}</td><td>${entry.points}</td><td>${timeFinal}</td><td>${entry.email}</td>`;
+        row.innerHTML = `<td>${index + 1}</td><td>${entry.name}</td><td>${entry.points}</td><td>${timeFinal}</td><td>${entry.email}</td>`;
 
-        if (entry.rank <= 3) {
+        if (index < 3) {
             row.classList.add('top3');
         }
 
         leaderboardTable.appendChild(row);
 
         if (entry.name === userName) {
-            userRank = entry.rank;
+            userRank = index + 1;
             userEntry = entry;
         }
     });
@@ -162,4 +190,15 @@ if (window.location.pathname.endsWith('quiz.html')) {
     startTimer();
 } else if (window.location.pathname.endsWith('results.html')) {
     loadResults();
+}
+
+// Ensure landscape mode on mobile devices
+window.addEventListener('orientationchange', () => {
+    if (window.orientation !== 90 && window.orientation !== -90) {
+        alert('Please rotate your device to landscape mode for the best experience.');
+    }
+});
+
+if (window.orientation !== 90 && window.orientation !== -90) {
+    alert('Please rotate your device to landscape mode for the best experience.');
 }
