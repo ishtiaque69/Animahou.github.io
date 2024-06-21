@@ -3,7 +3,7 @@ let timeLeft = 600; // 10 minutes in seconds
 
 const GITHUB_TOKEN = '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'; // Replace with your GitHub token
 const REPO_OWNER = 'ishtiaque69';
-const REPO_NAME = 'AnimeMahou.github.io';
+const REPO_NAME = 'Animahou.github.io';
 const FILE_PATH = 'data.json'; // Assuming the file is in the root directory of the repo
 
 // Function to fetch leaderboard data from GitHub
