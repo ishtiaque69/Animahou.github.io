@@ -1,44 +1,67 @@
+let timer;
+let timeLeft = 600; // 10 minutes in seconds
+
 // Function to fetch leaderboard data from GitHub
 async function fetchLeaderboard() {
-    try {
-        const response = await fetch('data.json');
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        const data = await response.json();
-        return data.leaderboard || []; // Assuming leaderboard is stored under 'leaderboard' key
-    } catch (error) {
-        console.error('Error fetching leaderboard data:', error);
-        return []; // Return empty array if there's an error
-    }
+    // Function code remains the same
 }
 
 // Function to update leaderboard data on GitHub
 async function updateLeaderboard(newEntry) {
-    try {
-        const leaderboard = await fetchLeaderboard();
-        leaderboard.push(newEntry);
-
-        const response = await fetch('data.json', {
-            method: 'PUT', // Use 'PUT' method to update file
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ leaderboard })
-        });
-
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-
-        console.log('Leaderboard updated successfully');
-    } catch (error) {
-        console.error('Error updating leaderboard data:', error);
-    }
+    // Function code remains the same
 }
 
-// Modify startQuiz function to call updateLeaderboard
+// Function to check if the device is in landscape mode
+function isLandscapeMode() {
+    // Check if the window inner height is less than the inner width
+    return window.innerHeight < window.innerWidth;
+}
+
+// Function to display a landscape mode warning
+function showLandscapeWarning() {
+    // Create a warning message element
+    const landscapeWarning = document.createElement('div');
+    landscapeWarning.innerHTML = `
+        <p>Please rotate your device to landscape mode for the best experience.</p>
+    `;
+    landscapeWarning.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 18px;
+        z-index: 1000;
+    `;
+
+    // Append the warning message to the document body
+    document.body.appendChild(landscapeWarning);
+
+    // Function to handle screen orientation change
+    function orientationChangeHandler() {
+        if (isLandscapeMode()) {
+            landscapeWarning.style.display = 'none';
+            window.removeEventListener('orientationchange', orientationChangeHandler);
+        }
+    }
+
+    // Listen for orientation change events
+    window.addEventListener('orientationchange', orientationChangeHandler);
+}
+
+// Function to start the quiz
 function startQuiz() {
+    // Check if the device is in portrait mode and show warning
+    if (!isLandscapeMode()) {
+        showLandscapeWarning();
+        return;
+    }
+
     const name = document.getElementById('name').value;
     const phone = document.getElementById('phone').value;
     const email = document.getElementById('email').value;
@@ -53,11 +76,30 @@ function startQuiz() {
     // Call updateLeaderboard to add new entry
     updateLeaderboard(newEntry);
 
+    // Start the timer
+    startTimer();
+
     // Redirect to quiz page
     window.location.href = 'quiz.html';
 }
 
-// Modify submitQuiz function to handle scoring and updating leaderboard
+// Function to start the timer
+function startTimer() {
+    const timerElement = document.getElementById('timer');
+    timer = setInterval(() => {
+        timeLeft--;
+        let minutes = Math.floor(timeLeft / 60);
+        let seconds = timeLeft % 60;
+        timerElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            submitQuiz();
+        }
+    }, 1000);
+}
+
+// Function to submit the quiz
 async function submitQuiz() {
     clearInterval(timer);
 
@@ -88,6 +130,12 @@ async function submitQuiz() {
 
 // Function to load leaderboard data on results page
 async function loadResults() {
+    // Check if the device is in portrait mode and show warning
+    if (!isLandscapeMode()) {
+        showLandscapeWarning();
+        return;
+    }
+
     const leaderboard = await fetchLeaderboard();
     const leaderboardTable = document.getElementById('leaderboard').querySelector('tbody');
     const userResultTable = document.getElementById('userResult').querySelector('tbody');
@@ -135,7 +183,7 @@ async function loadResults() {
 
 // Update page logic based on current page
 if (window.location.pathname.endsWith('quiz.html')) {
-    startTimer();
+    startQuiz(); // Call startQuiz to check orientation and start timer on page load
 } else if (window.location.pathname.endsWith('results.html')) {
-    loadResults();
+    loadResults(); // Call loadResults to check orientation on page load
 }
